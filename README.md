@@ -1,53 +1,77 @@
 # 🔧 Sistema de Gerenciamento de Oficina Mecânica
 
-Este projeto consiste na modelagem completa (Conceitual, Lógica e Física) de um banco de dados relacional para um sistema de controle e gerenciamento de ordens de serviço (OS) em uma oficina mecânica.
+Projeto de banco de dados completo (do zero a query) desenvolvido para um cenário de oficina mecânica. O projeto abrange a modelagem conceitual, lógica, criação do schema SQL, inserção de dados e uma bateria de testes com queries complexas.
 
-O esquema foi desenvolvido refinando requisitos de negócio para garantir integridade de dados, performance e escalabilidade, simulando um cenário real de mercado.
+## 📋 Visão Geral do Desafio
 
-## 📋 Descrição do Desafio e Narrativa
+O objetivo foi transformar uma narrativa de negócio em um banco de dados operacional.
 
-O objetivo foi criar um esquema conceitual do zero a partir da seguinte narrativa de negócio:
+**Cenário:**
+* Clientes levam veículos para conserto.
+* Mecânicos, organizados em equipes, executam serviços e utilizam peças.
+* Cada Ordem de Serviço (OS) consolida custos de mão-de-obra e peças.
 
-* **Clientes e Veículos:** Clientes levam veículos à oficina para conserto ou revisão. Um cliente pode ter vários veículos.
-* **Equipes e Mecânicos:** Os mecânicos são organizados em equipes (ex: Lataria, Motor). Uma equipe inteira é responsável por avaliar e executar os serviços em um veículo.
-* **Ordem de Serviço (OS):** O documento central que consolida os trabalhos. A OS possui número, data de emissão, status, valor total e data de conclusão.
-* **Composição de Custos:** O valor total da OS é calculado somando-se os **Serviços** (mão-de-obra baseada em tabela de referência) e as **Peças** utilizadas.
-* **Tabelas de Referência:** Os serviços e peças possuem tabelas próprias com valores padrão.
+**Destaque Técnico:**
+Este projeto refina o modelo padrão para resolver problemas reais de sistemas de produção:
+1.  **Histórico de Preços:** Implementação de tabelas associativas (`Item_OS...`) que salvam o valor histórico da peça/serviço no momento da venda, prevenindo erros financeiros futuros se a tabela de preços mudar.
+2.  **Tipagem Monetária:** Uso estrito de `DECIMAL` para cálculos financeiros precisos.
+3.  **Limpeza de Chaves:** Modelagem lógica refinada para evitar a propagação desnecessária de chaves estrangeiras (Snowball Effect).
 
-## 🛠️ Tecnologias Utilizadas
+---
 
-* **Banco de Dados:** MySQL
-* **Ferramenta de Modelagem:** MySQL Workbench
-* **Linguagem:** SQL (DDL/DML)
+## 📐 Modelagem EER
 
-## 📐 Estrutura do Modelo (Destaques Técnicos)
+O esquema foi desenhado no MySQL Workbench, garantindo integridade referencial e normalização.
 
-### 1. Histórico de Preços (Integridade Financeira)
-Uma falha comum em sistemas iniciantes é vincular a OS diretamente ao preço atual da peça/serviço. Se o preço da peça mudar na tabela `Peca` daqui a 6 meses, todas as OS antigas teriam seus valores alterados incorretamente.
-* **Solução:** Implementação de atributos `Valor_Unitario` e `Valor_Cobrado` nas tabelas associativas (`Detalhe_OS_Peca` e `Detalhe_OS_Servico`). Isso "congela" o preço praticado no momento da venda, garantindo que o histórico financeiro permaneça imutável.
+![Diagrama EER da Oficina](img/diagrama_oficina.png)
 
-### 2. Tipagem de Dados Adequada
-* **Valores Monetários:** Uso estrito de `DECIMAL` em vez de `FLOAT` para garantir precisão nos cálculos financeiros e evitar erros de arredondamento de ponto flutuante.
-* **Datas:** Uso de `YEAR` para o ano do veículo e `DATE` para emissões/conclusões.
-* **Status:** Uso de `ENUM` para restringir o status da OS, garantindo consistência na máquina de estados (ex: 'Em Analise', 'Aprovado', 'Concluido').
+---
 
-## 📊 Diagrama Entidade-Relacionamento (EER)
+## 🚀 Queries e Resultados (Proof of Concept)
 
-![Diagrama EER da Oficina](/img/diagrama_oficina.png)
+Abaixo estão os resultados práticos das queries SQL desenvolvidas para responder a perguntas estratégicas do negócio.
 
-## 🗂️ Dicionário de Dados Simplificado
+### 1. Relatório Geral de Ordens de Serviço
+**Objetivo:** Uma visão completa unindo as 4 tabelas principais (OS, Cliente, Veículo e Equipe) para identificar quem está fazendo o que.
+*Cláusulas:* `INNER JOIN`, `ORDER BY`.
 
-* `Cliente`: Dados cadastrais dos proprietários.
-* `Veiculo`: Dados do automóvel, vinculado a um cliente.
-* `Equipe`: Grupo de trabalho responsável pela execução.
-* `Mecanico`: Especialistas vinculados a uma equipe específica.
-* `OS`: Tabela central (Fato) que une Veículo e Equipe, contendo datas e status.
-* `Servico` / `Peca`: Tabelas de dimensão (catálogo) com descrições e preços de referência.
-* `Detalhe_OS_Servico`: Tabela associativa (N:N) que registra quais serviços foram feitos, quantidades e valores históricos.
-* `Detalhe_OS_Peca`: Tabela associativa (N:N) que registra quais peças foram usadas, quantidades e valores históricos.
+![Relatório Geral com Joins](img/query1.png)
 
-## 🚀 Como Executar
+### 2. Filtros e Ordenação de Serviços
+**Objetivo:** Listar serviços de alto valor (acima de R$ 60,00) ordenados do mais caro para o mais barato.
+*Cláusulas:* `WHERE`, `ORDER BY DESC`.
 
-1.  Clone este repositório.
-2.  Abra o arquivo `Oficina.mwb` no MySQL Workbench.
-3.  Execute o script para criar o esquema e as tabelas.
+![Filtro de Serviços](img/query2.png)
+
+### 3. Atributos Derivados (Cálculo de Subtotal)
+**Objetivo:** Calcular dinamicamente o valor total de itens dentro de uma OS específica, multiplicando quantidade por valor unitário.
+*Cláusulas:* `Atributo Derivado (Math)`, `Alias (AS)`.
+
+![Cálculo de Subtotal](img/query3.png)
+
+### 4. Inteligência de Clientes (Agregações)
+**Objetivo:** Identificar clientes fidelizados (que possuem mais de um veículo cadastrado) para campanhas de marketing.
+*Cláusulas:* `GROUP BY`, `HAVING`, `COUNT`.
+
+![Clientes com Múltiplos Veículos](img/query4.png)
+
+### 5. Cálculo Financeiro Robusto
+**Objetivo:** Calcular o faturamento real de uma OS finalizada, somando serviços e peças, tratando possíveis valores nulos.
+*Cláusulas:* `COALESCE`, `SUM`, `Subqueries`.
+
+![Cálculo Financeiro Total](img/query5.png)
+
+---
+
+## 🛠️ Como Executar Este Projeto
+
+1.  **Clonar o Repositório:**
+    ```bash
+    git clone [https://github.com/danilogep/Oficina-SQL-Database-Specialist](https://github.com/danilogep/Oficina-SQL-Database-Specialist)
+    ```
+2.  **Criar o Banco:**
+    Abra o arquivo `script_tabelas.sql` no seu SGBD e execute para criar a estrutura.
+3.  **Popular Dados:**
+    Execute o arquivo `script_insert.sql` para carregar os dados de teste.
+4.  **Testar:**
+    Execute os scripts de consulta apresentados acima para validar os resultados.
